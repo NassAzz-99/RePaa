@@ -1,0 +1,24 @@
+# ── Node / Backend ──────────────────────────────────────────
+backend/node_modules/
+backend/.env
+backend/uploads/
+
+# ── Flutter / Dart ───────────────────────────────────────────
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/build/
+app/.idea/
+app/*.iml
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor ───────────────────────────────────────────────────
+.vscode/settings.json
+*.suo
+*.user
+

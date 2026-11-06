@@ -1,0 +1,298 @@
+### ============================================================
+### Reservasi PAA – Contoh Request (.http / REST Client)
+### Gunakan ekstensi "REST Client" di VS Code, atau konversi ke curl.
+### Base URL: http://localhost:3000/api
+### ============================================================
+
+@base = http://localhost:3000/api
+# Isi token setelah login berhasil:
+@token = PASTE_TOKEN_HERE
+
+
+# ─── AUTH ────────────────────────────────────────────────────
+
+### 1. Register user baru
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Budi Santoso",
+  "email": "budi@example.com",
+  "password": "Budi@1234",
+  "password_confirmation": "Budi@1234"
+}
+
+###
+
+### 2. Login admin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@paa.local",
+  "password": "Admin@12345"
+}
+
+###
+
+### 3. Login user
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@paa.local",
+  "password": "User@12345"
+}
+
+###
+
+### 4. Me (siapa saya)
+GET {{base}}/auth/me
+Authorization: Bearer {{token}}
+
+###
+
+### 5. Logout
+POST {{base}}/auth/logout
+Authorization: Bearer {{token}}
+
+
+# ─── PROFIL ──────────────────────────────────────────────────
+
+### 6. Update profil
+PUT {{base}}/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Budi Santoso Updated",
+  "email": "budi@example.com"
+}
+
+###
+
+### 7. Ganti password
+PUT {{base}}/profile/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "current_password": "Budi@1234",
+  "password": "NewPass@5678",
+  "password_confirmation": "NewPass@5678"
+}
+
+
+# ─── REFERENSI ───────────────────────────────────────────────
+
+### 8. Daftar batch aktif
+GET {{base}}/batches
+Authorization: Bearer {{token}}
+
+###
+
+### 9. Autocomplete unit kerja
+GET {{base}}/work-units?q=Divisi
+Authorization: Bearer {{token}}
+
+###
+
+### 10. Dashboard availability kendaraan (hari ini)
+GET {{base}}/vehicles/availability
+Authorization: Bearer {{token}}
+
+###
+
+### 11. Dashboard availability kendaraan (tanggal tertentu)
+GET {{base}}/vehicles/availability?date=2026-11-10
+Authorization: Bearer {{token}}
+
+###
+
+### 12. Kendaraan tersedia untuk dropdown form
+GET {{base}}/vehicles/available?date=2026-11-10&batch_id=1
+Authorization: Bearer {{token}}
+
+
+# ─── RESERVASI PENGGUNA ──────────────────────────────────────
+
+### 13. Buat reservasi baru
+POST {{base}}/reservations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vehicle_id": 1,
+  "batch_id": 1,
+  "reservation_date": "2026-11-10",
+  "work_unit": "Divisi Pemeliharaan dan Perbaikan",
+  "purpose": "Pengiriman Material ke Gudang B"
+}
+
+###
+
+### 14. Riwayat reservasi saya
+GET {{base}}/reservations
+Authorization: Bearer {{token}}
+
+###
+
+### 15. Detail / struk reservasi
+GET {{base}}/reservations/1
+Authorization: Bearer {{token}}
+
+###
+
+### 16. Batalkan reservasi (hanya jika pending)
+POST {{base}}/reservations/1/cancel
+Authorization: Bearer {{token}}
+
+###
+
+### 17. Test double booking – slot yang sama (harus 409)
+POST {{base}}/reservations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vehicle_id": 1,
+  "batch_id": 1,
+  "reservation_date": "2026-11-10",
+  "work_unit": "Divisi Rantai Pasok",
+  "purpose": "Angkut Barang – test double booking"
+}
+
+
+# ─── NOTIFIKASI ──────────────────────────────────────────────
+
+### 18. Daftar notifikasi
+GET {{base}}/notifications
+Authorization: Bearer {{token}}
+
+###
+
+### 19. Badge unread count
+GET {{base}}/notifications/unread-count
+Authorization: Bearer {{token}}
+
+###
+
+### 20. Tandai notif dibaca
+POST {{base}}/notifications/1/read
+Authorization: Bearer {{token}}
+
+###
+
+### 21. Tandai semua dibaca
+POST {{base}}/notifications/read-all
+Authorization: Bearer {{token}}
+
+
+# ─── ADMIN ───────────────────────────────────────────────────
+# (gunakan token admin)
+
+### 22. Dashboard admin
+GET {{base}}/admin/dashboard
+Authorization: Bearer {{token}}
+
+###
+
+### 23. Daftar semua reservasi (admin)
+GET {{base}}/admin/reservations
+Authorization: Bearer {{token}}
+
+###
+
+### 24. Filter reservasi pending
+GET {{base}}/admin/reservations?status=pending
+Authorization: Bearer {{token}}
+
+###
+
+### 25. Approve reservasi
+POST {{base}}/admin/reservations/1/approve
+Authorization: Bearer {{token}}
+
+###
+
+### 26. Reject reservasi (dengan catatan)
+POST {{base}}/admin/reservations/1/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "admin_note": "Kendaraan sedang dalam perawatan mendadak."
+}
+
+###
+
+### 27. Complete reservasi (hanya dari approved)
+POST {{base}}/admin/reservations/1/complete
+Authorization: Bearer {{token}}
+
+###
+
+### 28. Daftar kendaraan (admin)
+GET {{base}}/admin/vehicles
+Authorization: Bearer {{token}}
+
+###
+
+### 29. Daftar user (admin)
+GET {{base}}/admin/users
+Authorization: Bearer {{token}}
+
+###
+
+### 30. Nonaktifkan user
+PATCH {{base}}/admin/users/2/active
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "is_active": false
+}
+
+###
+
+### 31. Ubah role user
+PATCH {{base}}/admin/users/2/role
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "role": "admin"
+}
+
+###
+
+### 32. Daftar batch (admin – termasuk nonaktif)
+GET {{base}}/admin/batches
+Authorization: Bearer {{token}}
+
+###
+
+### 33. Update batch
+PUT {{base}}/admin/batches/3
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Batch 3",
+  "start_time": "13:00",
+  "end_time": "15:00",
+  "is_active": true
+}
+
+###
+
+### 34. Laporan mingguan
+GET {{base}}/admin/reports?period=weekly&date=2026-11-05
+Authorization: Bearer {{token}}
+
+###
+
+### 35. Laporan harian
+GET {{base}}/admin/reports?period=daily&date=2026-11-05
+Authorization: Bearer {{token}}
+

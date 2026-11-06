@@ -1,0 +1,139 @@
+// Prisma Schema – Reservasi PAA
+// Semua tabel dan kolom snake_case menggunakan @@map / @map
+// sesuai blueprint 00_blueprint_database_api.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUM ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  user
+  admin
+
+  @@map("user_role")
+}
+
+enum VehicleStatus {
+  available
+  maintenance
+  inactive
+
+  @@map("vehicle_status")
+}
+
+enum ReservationStatus {
+  pending
+  approved
+  rejected
+  cancelled
+  completed
+
+  @@map("reservation_status")
+}
+
+// ─── MODELS ─────────────────────────────────────────────────────────────────
+
+model User {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(100)
+  email      String   @unique @db.VarChar(150)
+  password   String   @db.VarChar(255)
+  role       UserRole @default(user)
+  is_active  Boolean  @default(true) @map("is_active")
+  created_at DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updated_at DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  reservations         Reservation[] @relation("UserReservations")
+  processedReservations Reservation[] @relation("ProcessedByAdmin")
+  notifications        Notification[]
+
+  @@map("users")
+}
+
+model Vehicle {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(100)
+  type        String        @db.VarChar(100)
+  status      VehicleStatus @default(available)
+  photo_path  String?       @map("photo_path") @db.VarChar(255)
+  created_at  DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updated_at  DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  deleted_at  DateTime?     @map("deleted_at") @db.Timestamptz
+
+  reservations Reservation[]
+
+  @@map("vehicles")
+}
+
+model Batch {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(50)
+  start_time String   @map("start_time") @db.VarChar(5)
+  end_time   String   @map("end_time") @db.VarChar(5)
+  is_active  Boolean  @default(true) @map("is_active")
+  created_at DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updated_at DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  reservations Reservation[]
+
+  @@map("batches")
+}
+
+model WorkUnit {
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(150)
+
+  @@map("work_units")
+}
+
+model Reservation {
+  id               Int               @id @default(autoincrement())
+  user_id          Int               @map("user_id")
+  vehicle_id       Int               @map("vehicle_id")
+  batch_id         Int               @map("batch_id")
+  reservation_date DateTime          @map("reservation_date") @db.Date
+  work_unit        String            @map("work_unit") @db.VarChar(150)
+  purpose          String            @db.Text
+  status           ReservationStatus @default(pending)
+  admin_note       String?           @map("admin_note") @db.Text
+  processed_by     Int?              @map("processed_by")
+  processed_at     DateTime?         @map("processed_at") @db.Timestamptz
+  created_at       DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updated_at       DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  user      User    @relation("UserReservations", fields: [user_id], references: [id])
+  vehicle   Vehicle @relation(fields: [vehicle_id], references: [id])
+  batch     Batch   @relation(fields: [batch_id], references: [id])
+  processor User?   @relation("ProcessedByAdmin", fields: [processed_by], references: [id])
+
+  notifications Notification[]
+
+  // Index tambahan sesuai blueprint
+  @@index([reservation_date, status], name: "idx_reservations_date_status")
+  @@index([user_id, created_at], name: "idx_reservations_user_created")
+  @@map("reservations")
+}
+
+model Notification {
+  id             Int       @id @default(autoincrement())
+  user_id        Int       @map("user_id")
+  type           String    @db.VarChar(50)
+  title          String    @db.VarChar(150)
+  message        String    @db.Text
+  reservation_id Int?      @map("reservation_id")
+  read_at        DateTime? @map("read_at") @db.Timestamptz
+  created_at     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user        User         @relation(fields: [user_id], references: [id])
+  reservation Reservation? @relation(fields: [reservation_id], references: [id])
+
+  @@index([user_id, read_at], name: "idx_notifications_user_read")
+  @@map("notifications")
+}
