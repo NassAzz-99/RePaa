@@ -180,7 +180,7 @@ class _ReservationFormScreenState
               // ── Batch ─────────────────────────────────
               const _SectionLabel('Batch / Waktu'),
               DropdownButtonFormField<int>(
-                value: formState.selectedBatch?.id,
+                initialValue: formState.selectedBatch?.id,
                 hint: const Text('Pilih batch'),
                 items: formState.batches
                     .map(
@@ -212,7 +212,7 @@ class _ReservationFormScreenState
               // ── Kendaraan ─────────────────────────────
               const _SectionLabel('Kendaraan'),
               DropdownButtonFormField<int>(
-                value: formState.selectedVehicle?.id,
+                initialValue: formState.selectedVehicle?.id,
                 hint: const Text('Pilih kendaraan'),
                 items: formState.availableVehicles
                     .map(

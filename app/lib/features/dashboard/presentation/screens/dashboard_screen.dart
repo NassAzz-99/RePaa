@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../notification/presentation/screens/notification_screen.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/vehicle_card.dart';
 
@@ -22,13 +23,7 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
-          // Ikon lonceng notifikasi (badge diimplementasi di fitur Notifikasi)
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // TODO: navigasi ke halaman notifikasi (fitur 05)
-            },
-          ),
+          NotificationBell(onTap: () => context.go('/notifikasi')),
         ],
       ),
       body: RefreshIndicator(
@@ -170,9 +165,9 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
+    return const Wrap(
       spacing: 12,
-      children: const [
+      children: [
         _LegendItem(color: AppTheme.successColor, label: 'Kosong'),
         _LegendItem(color: AppTheme.warningColor, label: 'Menunggu'),
         _LegendItem(color: AppTheme.dangerColor, label: 'Dipesan'),

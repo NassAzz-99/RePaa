@@ -1,5 +1,5 @@
-/// Model untuk response GET /vehicles/availability
-/// Blueprint: { date, vehicles: [ { id, name, type, status, photo_url, slots: [] } ] }
+// Model untuk response GET /vehicles/availability
+// Blueprint: { date, vehicles: [ { id, name, type, status, photo_url, slots: [] } ] }
 
 class VehicleAvailabilityModel {
   final String date;
