@@ -25,28 +25,28 @@ async function main() {
   // ── Batches ──────────────────────────────────────────────────────────────
   // Blueprint: Batch 1 (07:30-09:30, aktif), Batch 2 (09:30-11:30, aktif),
   //            Batch 3 (13:00-15:00, nonaktif), Batch 4 (15:00-17:00, nonaktif)
-  const batches = await Promise.all([
-    prisma.batch.upsert({
-      where: { id: 1 },
-      update: {},
-      create: { name: 'Batch 1', start_time: '07:30', end_time: '09:30', is_active: true },
-    }),
-    prisma.batch.upsert({
-      where: { id: 2 },
-      update: {},
-      create: { name: 'Batch 2', start_time: '09:30', end_time: '11:30', is_active: true },
-    }),
-    prisma.batch.upsert({
-      where: { id: 3 },
-      update: {},
-      create: { name: 'Batch 3', start_time: '13:00', end_time: '15:00', is_active: false },
-    }),
-    prisma.batch.upsert({
-      where: { id: 4 },
-      update: {},
-      create: { name: 'Batch 4', start_time: '15:00', end_time: '17:00', is_active: false },
-    }),
-  ]);
+  const batchData = [
+    { id: 1, name: 'Batch 1', start_time: '07:30', end_time: '09:30', is_active: true },
+    { id: 2, name: 'Batch 2', start_time: '09:30', end_time: '11:30', is_active: true },
+    { id: 3, name: 'Batch 3', start_time: '13:00', end_time: '15:00', is_active: false },
+    { id: 4, name: 'Batch 4', start_time: '15:00', end_time: '17:00', is_active: false },
+  ];
+
+  const batches = [];
+  for (const b of batchData) {
+    const { id, ...data } = b;
+    batches.push(
+      await prisma.batch.upsert({
+        where: { id },
+        update: {},
+        create: { id, ...data },
+      })
+    );
+  }
+
+  // Samakan sequence auto-increment dengan id tertinggi agar insert berikutnya tidak bentrok
+  await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('batches', 'id'), (SELECT MAX(id) FROM batches))`;
+
   console.log(`  ✓ ${batches.length} batch selesai`);
 
   // ── Work Units ────────────────────────────────────────────────────────────
@@ -106,11 +106,11 @@ async function main() {
   // Blueprint seed: Forklift 10 Ton, 2 Ton, 7 Ton, Lift Truck, Trailer 22 Ton, Trailer 32 Ton
   const vehicleData = [
     { name: 'Forklift 10 Ton - Unit 1', type: 'Forklift 10 Ton', status: 'available' },
-    { name: 'Forklift 2 Ton - Unit 1',  type: 'Forklift 2 Ton',  status: 'available' },
-    { name: 'Forklift 7 Ton - Unit 1',  type: 'Forklift 7 Ton',  status: 'available' },
-    { name: 'Lift Truck - Unit 1',       type: 'Lift Truck',       status: 'available' },
-    { name: 'Trailer 22 Ton - Unit 1',   type: 'Trailer 22 Ton',   status: 'available' },
-    { name: 'Trailer 32 Ton - Unit 1',   type: 'Trailer 32 Ton',   status: 'available' },
+    { name: 'Forklift 2 Ton - Unit 1', type: 'Forklift 2 Ton', status: 'available' },
+    { name: 'Forklift 7 Ton - Unit 1', type: 'Forklift 7 Ton', status: 'available' },
+    { name: 'Lift Truck - Unit 1', type: 'Lift Truck', status: 'available' },
+    { name: 'Trailer 22 Ton - Unit 1', type: 'Trailer 22 Ton', status: 'available' },
+    { name: 'Trailer 32 Ton - Unit 1', type: 'Trailer 32 Ton', status: 'available' },
   ];
 
   for (const v of vehicleData) {
