@@ -6,11 +6,26 @@ import '../../../reservation/data/models/reservation_model.dart';
 import '../../../reservation/presentation/widgets/receipt_widget.dart';
 import '../providers/admin_reservation_provider.dart';
 
-class AdminReservationScreen extends ConsumerWidget {
+class AdminReservationScreen extends ConsumerStatefulWidget {
   const AdminReservationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminReservationScreen> createState() =>
+      _AdminReservationScreenState();
+}
+
+class _AdminReservationScreenState
+    extends ConsumerState<AdminReservationScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adminReservationProvider.notifier).load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(adminReservationProvider);
 
     return Scaffold(
@@ -54,27 +69,85 @@ class AdminReservationScreen extends ConsumerWidget {
           }
           if (state.errorMessage != null && state.reservations.isEmpty) {
             return Center(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.error_outline,
-                    size: 48, color: AppTheme.dangerColor),
-                const SizedBox(height: 8),
-                Text(state.errorMessage!, textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () =>
-                      ref.read(adminReservationProvider.notifier).load(),
-                  child: const Text('Coba Lagi'),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.error_outline,
+                        size: 48, color: AppTheme.dangerColor),
+                    const SizedBox(height: 8),
+                    Text(state.errorMessage!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () =>
+                          ref.read(adminReservationProvider.notifier).load(),
+                      child: const Text('Coba Lagi'),
+                    ),
+                  ]),
                 ),
-              ]),
+              ),
             );
           }
           if (state.reservations.isEmpty) {
-            return const Center(
-              child: Text('Tidak ada reservasi.',
-                  style: TextStyle(color: AppTheme.textSecondary)),
+            return Center(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.inbox_outlined,
+                          size: 32,
+                          color: Colors.grey.shade400,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Belum ada permohonan reservasi.',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        state.filter.isActive
+                            ? 'Tidak ada data yang sesuai filter.'
+                            : 'Reservasi dari pengguna akan muncul di sini.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      if (state.filter.isActive) ...[
+                        const SizedBox(height: 16),
+                        OutlinedButton(
+                          onPressed: () => ref
+                              .read(adminReservationProvider.notifier)
+                              .clearFilter(),
+                          child: const Text('Reset Filter'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             );
           }
           return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(12),
             itemCount: state.reservations.length,
             itemBuilder: (context, index) {

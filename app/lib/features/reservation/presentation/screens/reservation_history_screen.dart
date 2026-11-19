@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../core/theme/app_theme.dart';
 import '../providers/reservation_list_provider.dart';
@@ -9,14 +10,30 @@ import '../widgets/receipt_widget.dart';
 /// Spesifikasi (03_reservasi.md §B):
 /// - List card: Tanggal, Batch, Kendaraan, Unit Kerja, Status (badge warna)
 /// - Aksi: Struk (jika Disetujui/Selesai) atau Batalkan (jika Menunggu)
-class ReservationHistoryScreen extends ConsumerWidget {
+class ReservationHistoryScreen extends ConsumerStatefulWidget {
   const ReservationHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ReservationHistoryScreen> createState() =>
+      _ReservationHistoryScreenState();
+}
+
+class _ReservationHistoryScreenState
+    extends ConsumerState<ReservationHistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(reservationListProvider.notifier).load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(reservationListProvider);
 
     return Scaffold(
+      backgroundColor: AppTheme.scaffoldBg,
       appBar: AppBar(
         title: const Text('Riwayat Reservasi'),
         actions: [
@@ -27,46 +44,99 @@ class ReservationHistoryScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Builder(builder: (context) {
-        if (state.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(reservationListProvider.notifier).load(),
+        child: Builder(builder: (context) {
+          if (state.isLoading && state.reservations.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        if (state.errorMessage != null) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline,
-                    size: 48, color: AppTheme.dangerColor),
-                const SizedBox(height: 8),
-                Text(state.errorMessage!,
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () =>
-                      ref.read(reservationListProvider.notifier).load(),
-                  child: const Text('Coba Lagi'),
+          if (state.errorMessage != null && state.reservations.isEmpty) {
+            return Center(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          size: 48, color: AppTheme.dangerColor),
+                      const SizedBox(height: 8),
+                      Text(state.errorMessage!,
+                          textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () =>
+                            ref.read(reservationListProvider.notifier).load(),
+                        child: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          );
-        }
+              ),
+            );
+          }
 
-        if (state.reservations.isEmpty) {
-          return const Center(
-            child: Text(
-              'Belum ada riwayat reservasi.',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
-          );
-        }
+          if (state.reservations.isEmpty) {
+            return Center(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.history_outlined,
+                          size: 32,
+                          color: Colors.grey.shade400,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Belum Ada Riwayat Reservasi',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Reservasi yang Anda ajukan akan muncul di sini beserta status persetujuan dari admin.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: () => context.go('/reservasi'),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Buat Reservasi Baru'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: state.reservations.length,
-          itemBuilder: (context, index) {
-            final r = state.reservations[index];
+          return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(12),
+            itemCount: state.reservations.length,
+            itemBuilder: (context, index) {
+              final r = state.reservations[index];
 
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
@@ -135,6 +205,7 @@ class ReservationHistoryScreen extends ConsumerWidget {
           },
         );
       }),
+      ),
     );
   }
 

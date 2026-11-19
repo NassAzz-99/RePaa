@@ -44,6 +44,8 @@ class ReservationListNotifier
       state = state.copyWith(isLoading: false, reservations: list);
     } on ApiException catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.message);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: 'Gagal memuat riwayat: $e');
     }
   }
 
@@ -53,6 +55,8 @@ class ReservationListNotifier
       await load(); // refresh
     } on ApiException catch (e) {
       state = state.copyWith(errorMessage: e.message);
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Gagal membatalkan reservasi: $e');
     }
   }
 }

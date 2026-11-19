@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/utils/validators.dart';
 import '../providers/reservation_form_provider.dart';
+import '../providers/reservation_list_provider.dart';
 import '../widgets/receipt_widget.dart';
 
 /// Form Reservasi.
@@ -155,6 +156,7 @@ class _ReservationFormScreenState
               ElevatedButton(
                 onPressed: () {
                   ref.read(reservationFormProvider.notifier).reset();
+                  ref.read(reservationListProvider.notifier).load();
                   context.go('/riwayat');
                 },
                 child: const Text('Lihat Status di Riwayat'),

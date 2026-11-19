@@ -72,6 +72,8 @@ class AdminReservationNotifier extends StateNotifier<AdminReservationState> {
       state = state.copyWith(isLoading: false, reservations: list);
     } on ApiException catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.message);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: 'Gagal memuat reservasi: $e');
     }
   }
 
@@ -91,6 +93,8 @@ class AdminReservationNotifier extends StateNotifier<AdminReservationState> {
       await load();
     } on ApiException catch (e) {
       state = state.copyWith(errorMessage: e.message);
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Gagal menyetujui reservasi: $e');
     }
   }
 
@@ -100,6 +104,8 @@ class AdminReservationNotifier extends StateNotifier<AdminReservationState> {
       await load();
     } on ApiException catch (e) {
       state = state.copyWith(errorMessage: e.message);
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Gagal menolak reservasi: $e');
     }
   }
 
@@ -109,6 +115,8 @@ class AdminReservationNotifier extends StateNotifier<AdminReservationState> {
       await load();
     } on ApiException catch (e) {
       state = state.copyWith(errorMessage: e.message);
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Gagal menyelesaikan reservasi: $e');
     }
   }
 }
