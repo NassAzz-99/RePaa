@@ -44,9 +44,12 @@ class _ReservationHistoryScreenState
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(reservationListProvider.notifier).load(),
-        child: Builder(builder: (context) {
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(reservationListProvider.notifier).load(),
+            child: Builder(builder: (context) {
           if (state.isLoading && state.reservations.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -147,27 +150,41 @@ class _ReservationHistoryScreenState
                   children: [
                     // ── Header Card ─────────────────────
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Text(
-                            r.vehicle.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                r.vehicle.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                r.vehicle.type,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         _StatusChip(status: r.status),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const Divider(height: 18),
                     _InfoRow(
-                        Icons.calendar_today_outlined, r.reservationDate),
-                    _InfoRow(Icons.access_time_outlined,
-                        '${r.batch.name}  ${r.batch.startTime}–${r.batch.endTime}'),
+                        Icons.calendar_today_outlined, '${r.reservationDate} · ${r.batch.name} (${r.batch.startTime}–${r.batch.endTime})'),
                     _InfoRow(Icons.business_outlined, r.workUnit),
+                    _InfoRow(Icons.notes_outlined, 'Kebutuhan: ${r.purpose}'),
                     if (r.adminNote != null && r.adminNote!.isNotEmpty)
-                      _InfoRow(Icons.sticky_note_2_outlined, r.adminNote!),
+                      _InfoRow(Icons.sticky_note_2_outlined, 'Catatan Admin: ${r.adminNote!}'),
                     const SizedBox(height: 10),
 
                     // ── Aksi ────────────────────────────
@@ -205,6 +222,8 @@ class _ReservationHistoryScreenState
           },
         );
       }),
+      ),
+      ),
       ),
     );
   }
@@ -283,7 +302,7 @@ class _StatusChip extends StatelessWidget {
       'completed': AppTheme.primaryColor,
     };
     final labels = {
-      'pending': 'Menunggu',
+      'pending': 'Menunggu Persetujuan',
       'approved': 'Disetujui',
       'rejected': 'Ditolak',
       'cancelled': 'Dibatalkan',

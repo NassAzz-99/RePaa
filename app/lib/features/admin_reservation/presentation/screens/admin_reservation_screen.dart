@@ -61,9 +61,12 @@ class _AdminReservationScreenState
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(adminReservationProvider.notifier).load(),
-        child: Builder(builder: (context) {
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 850),
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(adminReservationProvider.notifier).load(),
+            child: Builder(builder: (context) {
           if (state.isLoading && state.reservations.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -164,8 +167,10 @@ class _AdminReservationScreenState
             },
           );
         }),
-      ),
-    );
+        ),
+        ),
+        ),
+      );
   }
 
   void _showFilterSheet(BuildContext context, WidgetRef ref,
@@ -333,10 +338,10 @@ class _ReservationCard extends StatelessWidget {
 
           // Info rows
           _Row(Icons.business_outlined, r.workUnit),
-          _Row(Icons.local_shipping_outlined, r.vehicle.name),
+          _Row(Icons.local_shipping_outlined, '${r.vehicle.name} (${r.vehicle.type})'),
           _Row(Icons.calendar_today_outlined,
               '${r.reservationDate} · ${r.batch.name} ${r.batch.startTime}–${r.batch.endTime}'),
-          _Row(Icons.notes_outlined, r.purpose,
+          _Row(Icons.notes_outlined, 'Kebutuhan: ${r.purpose}',
               maxLines: 2),
           if (r.adminNote != null && r.adminNote!.isNotEmpty)
             _Row(Icons.sticky_note_2_outlined, 'Catatan: ${r.adminNote!}'),
@@ -442,7 +447,7 @@ class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.status});
 
   static const _map = {
-    'pending': ('Menunggu', AppTheme.warningColor),
+    'pending': ('Menunggu Persetujuan', AppTheme.warningColor),
     'approved': ('Disetujui', AppTheme.successColor),
     'rejected': ('Ditolak', AppTheme.dangerColor),
     'cancelled': ('Dibatalkan', Color(0xFF95A5A6)),
