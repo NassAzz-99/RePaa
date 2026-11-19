@@ -54,9 +54,11 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     state = state.copyWith(isLoading: true, errorMessage: null, selectedDate: targetDate);
     try {
       final data = await _repo.getAvailability(date: targetDate);
-      state = state.copyWith(isLoading: false, data: data);
+      state = state.copyWith(isLoading: false, data: data, errorMessage: null);
     } on ApiException catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.message);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: 'Gagal memuat ketersediaan: $e');
     }
   }
 
