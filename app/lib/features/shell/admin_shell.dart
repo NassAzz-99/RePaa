@@ -3,17 +3,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 
-/// Shell navigasi admin: 5 tab (Dashboard, Reservasi, Kelola, Laporan, Profil).
-/// Spesifikasi (01_auth.md): bottom navigation untuk role 'admin'.
+/// Shell navigasi admin: 4 tab (Dashboard, Reservasi, Kelola, Profil).
+/// Halaman Laporan sudah terintegrasi langsung di dalam Dashboard.
 class AdminShell extends StatelessWidget {
   final Widget child;
   const AdminShell({super.key, required this.child});
 
   static const _tabs = [
-    _TabItem(icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, label: 'Dashboard', path: '/admin'),
+    _TabItem(icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, label: 'Dashboard', path: '/admin'),
     _TabItem(icon: Icons.assignment_outlined, activeIcon: Icons.assignment, label: 'Reservasi', path: '/admin/reservasi'),
     _TabItem(icon: Icons.manage_accounts_outlined, activeIcon: Icons.manage_accounts, label: 'Kelola', path: '/admin/kelola'),
-    _TabItem(icon: Icons.summarize_outlined, activeIcon: Icons.summarize, label: 'Laporan', path: '/admin/laporan'),
     _TabItem(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profil', path: '/admin/profil'),
   ];
 

@@ -57,6 +57,8 @@ class AdminReportNotifier extends StateNotifier<AdminReportState> {
       state = state.copyWith(isLoading: false, data: data);
     } on ApiException catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.message);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }
 
@@ -75,4 +77,3 @@ final adminReportProvider =
     StateNotifierProvider<AdminReportNotifier, AdminReportState>((ref) {
   return AdminReportNotifier(ref.watch(adminReportRepositoryProvider));
 });
-

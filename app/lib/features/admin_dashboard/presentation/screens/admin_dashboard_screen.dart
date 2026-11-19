@@ -5,82 +5,276 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/dashboard_stat_model.dart';
+import '../../data/models/report_model.dart';
 import '../providers/admin_dashboard_provider.dart';
+import '../providers/admin_report_provider.dart';
 
-class AdminDashboardScreen extends ConsumerWidget {
+/// Halaman Terpadu: Dashboard & Laporan Admin.
+/// Menggabungkan operasional real-time (tindakan approval cepat & metrik hari ini)
+/// serta analisis tren historis (grafik harian/mingguan & status armada).
+class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(adminDashboardProvider);
+  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
 
+class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _refreshAll() {
+    ref.read(adminDashboardProvider.notifier).load();
+    ref.read(adminReportProvider.notifier).load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.scaffoldBg,
       appBar: AppBar(
-        title: const Text('Dashboard Admin'),
+        title: const Text('Dashboard & Laporan'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(adminDashboardProvider.notifier).load(),
+            tooltip: 'Perbarui Data',
+            onPressed: _refreshAll,
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          tabs: const [
+            Tab(icon: Icon(Icons.dashboard_outlined), text: 'Operasional'),
+            Tab(icon: Icon(Icons.analytics_outlined), text: 'Laporan & Tren'),
+          ],
+        ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(adminDashboardProvider.notifier).load(),
-        child: Builder(builder: (context) {
-          if (state.isLoading && state.data == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state.errorMessage != null && state.data == null) {
-            return Center(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.error_outline,
-                    size: 48, color: AppTheme.dangerColor),
-                const SizedBox(height: 8),
-                Text(state.errorMessage!,
-                    textAlign: TextAlign.center,
-                    style:
-                        const TextStyle(color: AppTheme.textSecondary)),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () =>
-                      ref.read(adminDashboardProvider.notifier).load(),
-                  child: const Text('Coba Lagi'),
-                ),
-              ]),
-            );
-          }
-          final data = state.data;
-          if (data == null) return const SizedBox();
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // ── Stat Cards ───────────────────────────────
-              _StatCards(data: data),
-              const SizedBox(height: 16),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // ── Tab 1: Operasional ────────────────────────────────────
+          _OperationalTab(onRefresh: _refreshAll),
 
-              // ── Donut Chart ──────────────────────────────
-              _DonutSection(dist: data.statusDistribution),
-              const SizedBox(height: 16),
-
-              // ── Pending List ─────────────────────────────
-              _PendingSection(
-                items: data.pendingList,
-                onApprove: (id) =>
-                    ref.read(adminDashboardProvider.notifier).approve(id),
-                onReject: (id, note) =>
-                    ref.read(adminDashboardProvider.notifier).reject(id, note),
-                onViewAll: () => context.go('/admin/reservasi'),
-              ),
-            ],
-          );
-        }),
+          // ── Tab 2: Laporan & Tren ─────────────────────────────────
+          _ReportTab(onRefresh: _refreshAll),
+        ],
       ),
     );
   }
 }
 
-// ── Stat Cards ────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+// TAB 1: OPERASIONAL
+// ────────────────────────────────────────────────────────────────────────────
+
+class _OperationalTab extends ConsumerWidget {
+  final VoidCallback onRefresh;
+  const _OperationalTab({required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(adminDashboardProvider);
+
+    if (state.isLoading && state.data == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state.errorMessage != null && state.data == null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: AppTheme.dangerColor),
+            const SizedBox(height: 8),
+            Text(state.errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppTheme.textSecondary)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.read(adminDashboardProvider.notifier).load(),
+              child: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final data = state.data;
+    if (data == null) return const SizedBox();
+
+    return RefreshIndicator(
+      onRefresh: () async => ref.read(adminDashboardProvider.notifier).load(),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // ── Stat Cards ──────────────────────────────────────────
+          _StatCards(data: data),
+          const SizedBox(height: 16),
+
+          // ── Permohonan Menunggu Tindakan (Aksi Cepat) ───────────
+          _PendingSection(
+            items: data.pendingList,
+            onApprove: (id) =>
+                ref.read(adminDashboardProvider.notifier).approve(id),
+            onReject: (id, note) =>
+                ref.read(adminDashboardProvider.notifier).reject(id, note),
+            onViewAll: () => context.go('/admin/reservasi'),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Donut Chart Distribusi Status ────────────────────────
+          _DonutSection(dist: data.statusDistribution),
+        ],
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// TAB 2: LAPORAN & TREN
+// ────────────────────────────────────────────────────────────────────────────
+
+class _ReportTab extends ConsumerWidget {
+  final VoidCallback onRefresh;
+  const _ReportTab({required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(adminReportProvider);
+
+    return RefreshIndicator(
+      onRefresh: () async => ref.read(adminReportProvider.notifier).load(),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // ── Filter Bar ──────────────────────────────────────────
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'daily', label: Text('Harian')),
+                        ButtonSegment(value: 'weekly', label: Text('Mingguan')),
+                      ],
+                      selected: {state.period},
+                      onSelectionChanged: (s) =>
+                          ref.read(adminReportProvider.notifier).setPeriod(s.first),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // Date Picker
+                  InkWell(
+                    onTap: () async {
+                      final parts = state.startDate.split('-');
+                      final initial = parts.length == 3
+                          ? DateTime(int.parse(parts[0]), int.parse(parts[1]),
+                              int.parse(parts[2]))
+                          : DateTime.now();
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: initial,
+                        firstDate: DateTime(2024),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        final d =
+                            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                        ref.read(adminReportProvider.notifier).setStartDate(d);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today_outlined,
+                              size: 16, color: AppTheme.textSecondary),
+                          const SizedBox(width: 6),
+                          Text(
+                            state.startDate.isNotEmpty
+                                ? state.startDate
+                                : 'Pilih Tanggal',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // ── Content State ───────────────────────────────────────
+          if (state.isLoading && state.data == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (state.errorMessage != null && state.data == null)
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline,
+                      size: 48, color: AppTheme.dangerColor),
+                  const SizedBox(height: 8),
+                  Text(state.errorMessage!, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () =>
+                        ref.read(adminReportProvider.notifier).load(),
+                    child: const Text('Coba Lagi'),
+                  ),
+                ],
+              ),
+            )
+          else if (state.data != null) ...[
+            // Status Summary Cards
+            _StatusSummaryGrid(summary: state.data!.statusSummary),
+            const SizedBox(height: 14),
+
+            // Bar Chart Tren
+            _TrendChart(trend: state.data!.trend, period: state.period),
+            const SizedBox(height: 14),
+
+            // Kesiapan Armada
+            _VehicleStatusCard(vehicleStatus: state.data!.vehicleStatus),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Komponen Operasional: StatCards, Donut, PendingList
+// ────────────────────────────────────────────────────────────────────────────
 
 class _StatCards extends StatelessWidget {
   final DashboardStatModel data;
@@ -175,8 +369,6 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ── Donut Chart ───────────────────────────────────────────
-
 class _DonutSection extends StatelessWidget {
   final Map<String, int> dist;
   const _DonutSection({required this.dist});
@@ -199,7 +391,7 @@ class _DonutSection extends StatelessWidget {
         .map((c) => PieChartSectionData(
               value: (dist[c.$1] ?? 0).toDouble(),
               color: c.$3,
-              radius: 48,
+              radius: 46,
               title: '${dist[c.$1]}',
               titleStyle: const TextStyle(
                   fontSize: 11,
@@ -270,8 +462,6 @@ class _Legend extends StatelessWidget {
   }
 }
 
-// ── Pending List ──────────────────────────────────────────
-
 class _PendingSection extends StatelessWidget {
   final List<PendingReservationItem> items;
   final void Function(int id) onApprove;
@@ -296,7 +486,7 @@ class _PendingSection extends StatelessWidget {
             Row(children: [
               const Expanded(
                 child: Text(
-                  '⏳  Reservasi Menunggu',
+                  '⏳  Reservasi Menunggu Persetujuan',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -304,26 +494,274 @@ class _PendingSection extends StatelessWidget {
                   ),
                 ),
               ),
-              TextButton(
-                onPressed: onViewAll,
-                child: const Text('Lihat semua →'),
-              ),
+              if (items.isNotEmpty)
+                TextButton(
+                  onPressed: onViewAll,
+                  child: const Text('Lihat Semua', style: TextStyle(fontSize: 12)),
+                ),
             ]),
             const Divider(height: 16),
             if (items.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Center(
-                  child: Text('Tidak ada reservasi menunggu.',
-                      style: TextStyle(color: AppTheme.textSecondary)),
+                  child: Text(
+                    'Tidak ada reservasi menunggu persetujuan.',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  ),
                 ),
               )
             else
-              ...items.map((item) => _PendingCard(
-                    item: item,
-                    onApprove: () => onApprove(item.id),
-                    onReject: (note) => onReject(item.id, note),
-                  )),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                separatorBuilder: (context, index) => const Divider(height: 16),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.vehicleName,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${item.userName} · ${item.batchName}',
+                              style: const TextStyle(
+                                  fontSize: 12, color: AppTheme.textSecondary),
+                            ),
+                            Text(
+                              item.reservationDate,
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppTheme.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        onPressed: () => _showRejectDialog(context, item.id),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.dangerColor,
+                          side: const BorderSide(color: AppTheme.dangerColor),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          minimumSize: const Size(0, 32),
+                        ),
+                        child: const Text('Tolak', style: TextStyle(fontSize: 12)),
+                      ),
+                      const SizedBox(width: 6),
+                      ElevatedButton(
+                        onPressed: () => onApprove(item.id),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.successColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          minimumSize: const Size(0, 32),
+                        ),
+                        child: const Text('Setujui', style: TextStyle(fontSize: 12)),
+                      ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRejectDialog(BuildContext context, int id) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Tolak Reservasi'),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(
+            labelText: 'Alasan Penolakan (opsional)',
+            hintText: 'Masukkan alasan...',
+          ),
+          maxLines: 2,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ctrl.dispose();
+            },
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final note = ctrl.text.trim();
+              Navigator.pop(ctx);
+              ctrl.dispose();
+              onReject(id, note.isEmpty ? null : note);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerColor),
+            child: const Text('Tolak'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Komponen Laporan: SummaryGrid, TrendChart, VehicleStatusCard
+// ────────────────────────────────────────────────────────────────────────────
+
+class _StatusSummaryGrid extends StatelessWidget {
+  final Map<String, int> summary;
+  const _StatusSummaryGrid({required this.summary});
+
+  static const _config = [
+    ('pending', 'Menunggu', AppTheme.warningColor, Icons.hourglass_top_outlined),
+    ('approved', 'Disetujui', AppTheme.successColor, Icons.check_circle_outline),
+    ('rejected', 'Ditolak', AppTheme.dangerColor, Icons.cancel_outlined),
+    ('completed', 'Selesai', AppTheme.primaryColor, Icons.flag_outlined),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 1.8,
+      children: _config.map((c) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(c.$4, color: c.$3, size: 28),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${summary[c.$1] ?? 0}',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: c.$3,
+                      ),
+                    ),
+                    Text(
+                      c.$2,
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _TrendChart extends StatelessWidget {
+  final List<DailyTrendItem> trend;
+  final String period;
+  const _TrendChart({required this.trend, required this.period});
+
+  @override
+  Widget build(BuildContext context) {
+    if (trend.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(
+            child: Text('Belum ada data tren untuk periode ini.',
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+        ),
+      );
+    }
+
+    final maxY = trend.map((t) => t.count).fold(0, (a, b) => a > b ? a : b);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              period == 'daily' ? '📈  Tren Reservasi Harian' : '📈  Tren Reservasi Mingguan',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 180,
+              child: BarChart(
+                BarChartData(
+                  maxY: (maxY + 2).toDouble(),
+                  barGroups: trend.asMap().entries.map((e) {
+                    return BarChartGroupData(
+                      x: e.key,
+                      barRods: [
+                        BarChartRodData(
+                          toY: e.value.count.toDouble(),
+                          color: AppTheme.accentColor,
+                          width: 16,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                  titlesData: FlTitlesData(
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: true, reservedSize: 28),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (val, meta) {
+                          final idx = val.toInt();
+                          if (idx < 0 || idx >= trend.length) {
+                            return const SizedBox();
+                          }
+                          final date = trend[idx].date;
+                          final parts = date.split('-');
+                          final label = parts.length >= 3
+                              ? '${parts[2]}/${parts[1]}'
+                              : date;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(label, style: const TextStyle(fontSize: 10)),
+                          );
+                        },
+                      ),
+                    ),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  gridData: const FlGridData(show: false),
+                  borderData: FlBorderData(show: false),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -331,129 +769,82 @@ class _PendingSection extends StatelessWidget {
   }
 }
 
-class _PendingCard extends StatelessWidget {
-  final PendingReservationItem item;
-  final VoidCallback onApprove;
-  final void Function(String? note) onReject;
-  const _PendingCard({
-    required this.item,
-    required this.onApprove,
-    required this.onReject,
+class _VehicleStatusCard extends StatelessWidget {
+  final Map<String, int> vehicleStatus;
+  const _VehicleStatusCard({required this.vehicleStatus});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '🚚  Kesiapan Armada Kendaraan',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const Divider(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _StatusIndicator(
+                  label: 'Tersedia',
+                  count: vehicleStatus['available'] ?? 0,
+                  color: AppTheme.successColor,
+                ),
+                _StatusIndicator(
+                  label: 'Perawatan',
+                  count: vehicleStatus['maintenance'] ?? 0,
+                  color: AppTheme.warningColor,
+                ),
+                _StatusIndicator(
+                  label: 'Nonaktif',
+                  count: vehicleStatus['inactive'] ?? 0,
+                  color: AppTheme.dangerColor,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusIndicator extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  const _StatusIndicator({
+    required this.label,
+    required this.count,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.warningColor.withValues(alpha: 0.05),
-        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(item.userName,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 13)),
-          const SizedBox(height: 2),
-          Text(item.userEmail,
-              style: const TextStyle(
-                  fontSize: 12, color: AppTheme.textSecondary)),
-          const SizedBox(height: 6),
-          _InfoRow(Icons.business_outlined, item.workUnit),
-          _InfoRow(Icons.local_shipping_outlined, item.vehicleName),
-          _InfoRow(
-            Icons.access_time_outlined,
-            '${item.reservationDate} · ${item.batchName} ${item.batchStartTime}–${item.batchEndTime}',
-          ),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showRejectDialog(context),
-                icon: const Icon(Icons.close, size: 14),
-                label: const Text('Tolak'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.dangerColor,
-                  side: const BorderSide(color: AppTheme.dangerColor),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: onApprove,
-                icon: const Icon(Icons.check, size: 14),
-                label: const Text('Setuju'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.successColor,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                ),
-              ),
-            ),
-          ]),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showRejectDialog(BuildContext context) async {
-    final ctrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Tolak Reservasi'),
-        content: TextField(
-          controller: ctrl,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: 'Catatan penolakan (opsional)',
+    return Column(
+      children: [
+        Text(
+          '$count',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: color,
           ),
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style:
-                ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerColor),
-            child: const Text('Tolak'),
-          ),
-        ],
-      ),
-    );
-    final text = ctrl.text.trim();
-    ctrl.dispose();
-    if (confirmed == true) {
-      onReject(text.isEmpty ? null : text);
-    }
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _InfoRow(this.icon, this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(children: [
-        Icon(icon, size: 13, color: AppTheme.textSecondary),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(text,
-              style: const TextStyle(
-                  fontSize: 12, color: AppTheme.textSecondary),
-              overflow: TextOverflow.ellipsis),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
-      ]),
+      ],
     );
   }
 }
-

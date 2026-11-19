@@ -6,7 +6,6 @@ import '../../features/admin_batch/presentation/screens/admin_batch_screen.dart'
 import '../../features/admin_dashboard/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin_manage/presentation/screens/admin_manage_screen.dart';
 import '../../features/admin_profile/presentation/screens/admin_profile_screen.dart';
-import '../../features/admin_report/presentation/screens/admin_report_screen.dart';
 import '../../features/admin_reservation/presentation/screens/admin_reservation_screen.dart';
 import '../../features/admin_user/presentation/screens/admin_user_screen.dart';
 import '../../features/admin_vehicle/data/models/vehicle_model.dart';
@@ -100,10 +99,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/kelola',
             builder: (context, state) => const AdminManageScreen(),
-          ),
-          GoRoute(
-            path: '/admin/laporan',
-            builder: (context, state) => const AdminReportScreen(),
           ),
           GoRoute(
             path: '/admin/profil',

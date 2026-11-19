@@ -34,4 +34,3 @@ class ReportModel {
         statusSummary: summary, trend: trend, vehicleStatus: vs);
   }
 }
-

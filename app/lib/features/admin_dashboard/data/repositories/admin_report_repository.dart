@@ -15,7 +15,7 @@ class AdminReportRepository {
   }) async {
     try {
       final res = await _dio.get('/admin/reports',
-          queryParameters: {'period': period, 'start_date': startDate});
+          queryParameters: {'period': period, 'date': startDate});
       return ReportModel.fromJson(
           res.data['data'] as Map<String, dynamic>);
     } on DioException catch (e) {
@@ -28,4 +28,3 @@ final adminReportRepositoryProvider =
     Provider<AdminReportRepository>((ref) {
   return AdminReportRepository(ref.watch(dioProvider));
 });
-
