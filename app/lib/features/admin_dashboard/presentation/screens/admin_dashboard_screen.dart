@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../notification/presentation/screens/notification_screen.dart';
 import '../../data/models/dashboard_stat_model.dart';
 import '../../data/models/report_model.dart';
 import '../providers/admin_dashboard_provider.dart';
@@ -45,6 +46,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
         ),
         actions: [
+          NotificationBell(onTap: () => context.go('/admin/notifikasi')),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, size: 22),
             tooltip: 'Perbarui Data',

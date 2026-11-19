@@ -104,6 +104,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/admin/profil',
             builder: (context, state) => const AdminProfileScreen(),
           ),
+          GoRoute(
+            path: '/admin/notifikasi',
+            builder: (context, state) => const NotificationScreen(),
+          ),
         ],
       ),
 

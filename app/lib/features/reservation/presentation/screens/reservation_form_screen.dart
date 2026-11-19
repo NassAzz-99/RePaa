@@ -100,25 +100,54 @@ class _ReservationFormScreenState
   Widget build(BuildContext context) {
     final formState = ref.watch(reservationFormProvider);
 
-    // Jika sukses, tampilkan struk
+    // Jika sukses, tampilkan struk pengajuan
     if (formState.isSuccess && formState.createdReservation != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Reservasi Berhasil')),
+        appBar: AppBar(title: const Text('Permohonan Diajukan')),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              const Icon(Icons.check_circle,
-                  color: AppTheme.successColor, size: 72),
-              const SizedBox(height: 8),
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppTheme.warningColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.hourglass_top_rounded,
+                  color: AppTheme.warningColor,
+                  size: 46,
+                ),
+              ),
+              const SizedBox(height: 12),
               const Text(
-                'Reservasi Berhasil Diajukan!',
+                'Permohonan Berhasil Diajukan!',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.warningColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.warningColor),
+                ),
+                child: const Text(
+                  'STATUS: MENUNGGU PERSETUJUAN (PENDING)',
+                  style: TextStyle(
+                    color: AppTheme.warningColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               const Text(
-                'Menunggu persetujuan admin.',
-                style: TextStyle(color: AppTheme.textSecondary),
+                'Permohonan reservasi Anda telah terkirim ke Administrator.\nAdmin akan memeriksa dan menyetujui atau menolak permohonan ini.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 16),
               ReceiptWidget(reservation: formState.createdReservation!),
@@ -128,7 +157,7 @@ class _ReservationFormScreenState
                   ref.read(reservationFormProvider.notifier).reset();
                   context.go('/riwayat');
                 },
-                child: const Text('Lihat Riwayat'),
+                child: const Text('Lihat Status di Riwayat'),
               ),
             ],
           ),
