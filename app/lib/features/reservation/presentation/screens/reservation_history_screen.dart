@@ -3,13 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../core/theme/app_theme.dart';
+import '../../../reservation/data/models/reservation_model.dart';
 import '../providers/reservation_list_provider.dart';
 import '../widgets/receipt_widget.dart';
 
-/// Halaman Riwayat Reservasi.
-/// Spesifikasi (03_reservasi.md §B):
-/// - List card: Tanggal, Batch, Kendaraan, Unit Kerja, Status (badge warna)
-/// - Aksi: Struk (jika Disetujui/Selesai) atau Batalkan (jika Menunggu)
+/// Halaman Riwayat Reservasi Pengguna.
+/// Sesuai spesifikasi FIX_BLANK_PAGE_RESERVASI.md:
+/// - Mobile (< 700px): Card list rapi dengan Expanded(child: ListView.builder)
+/// - Desktop (>= 700px): Tabel lebar DataTable dengan horizontal scroll
+/// - Bebas unbounded constraint error dan null-safe 100%
 class ReservationHistoryScreen extends ConsumerStatefulWidget {
   const ReservationHistoryScreen({super.key});
 
@@ -32,6 +34,148 @@ class _ReservationHistoryScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(reservationListProvider);
 
+    Widget content;
+    if (state.isLoading && state.reservations.isEmpty) {
+      content = const Center(child: CircularProgressIndicator());
+    } else if (state.errorMessage != null && state.reservations.isEmpty) {
+      content = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: AppTheme.dangerColor),
+              const SizedBox(height: 12),
+              Text(
+                state.errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => ref.read(reservationListProvider.notifier).load(),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Coba Lagi'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (state.reservations.isEmpty) {
+      content = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.history_outlined, size: 32, color: Colors.grey.shade400),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Belum Ada Riwayat Reservasi',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Reservasi yang Anda ajukan akan muncul di sini beserta status persetujuan dari admin.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () => context.go('/reservasi'),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Buat Reservasi Baru'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 700) {
+            // ── Mobile View (< 700px): Card List ────────────
+            return RefreshIndicator(
+              onRefresh: () => ref.read(reservationListProvider.notifier).load(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: state.reservations.length,
+                itemBuilder: (context, index) {
+                  final r = state.reservations[index];
+                  return _buildUserReservationCard(r);
+                },
+              ),
+            );
+          } else {
+            // ── Desktop View (>= 700px): Tabel Lebar DataTable ─
+            return RefreshIndicator(
+              onRefresh: () => ref.read(reservationListProvider.notifier).load(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth - 32),
+                    child: Card(
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      child: DataTable(
+                        headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
+                        columns: const [
+                          DataColumn(label: Text('Tanggal', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Batch', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Kendaraan', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Unit Kerja', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Jenis Kebutuhan', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Catatan Admin', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Aksi', style: TextStyle(fontWeight: FontWeight.bold))),
+                        ],
+                        rows: state.reservations.map((r) {
+                          return DataRow(
+                            cells: [
+                              DataCell(Text(r.reservationDate)),
+                              DataCell(Text('${r.batch.name} (${r.batch.startTime}–${r.batch.endTime})')),
+                              DataCell(Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(r.vehicle.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                  Text(r.vehicle.type, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                                ],
+                              )),
+                              DataCell(Text(r.workUnit)),
+                              DataCell(Text(r.purpose.length > 25 ? '${r.purpose.substring(0, 25)}...' : r.purpose)),
+                              DataCell(_StatusChip(status: r.status)),
+                              DataCell(Text(r.adminNote != null && r.adminNote!.isNotEmpty ? r.adminNote! : '-')),
+                              DataCell(_buildUserActionButtons(r)),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+        },
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.scaffoldBg,
       appBar: AppBar(
@@ -39,202 +183,109 @@ class _ReservationHistoryScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                ref.read(reservationListProvider.notifier).load(),
+            tooltip: 'Segarkan',
+            onPressed: () => ref.read(reservationListProvider.notifier).load(),
           ),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: RefreshIndicator(
-            onRefresh: () => ref.read(reservationListProvider.notifier).load(),
-            child: Builder(builder: (context) {
-          if (state.isLoading && state.reservations.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state.errorMessage != null && state.reservations.isEmpty) {
-            return Center(
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 48, color: AppTheme.dangerColor),
-                      const SizedBox(height: 8),
-                      Text(state.errorMessage!,
-                          textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () =>
-                            ref.read(reservationListProvider.notifier).load(),
-                        child: const Text('Coba Lagi'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-
-          if (state.reservations.isEmpty) {
-            return Center(
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.history_outlined,
-                          size: 32,
-                          color: Colors.grey.shade400,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Belum Ada Riwayat Reservasi',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Reservasi yang Anda ajukan akan muncul di sini beserta status persetujuan dari admin.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton.icon(
-                        onPressed: () => context.go('/reservasi'),
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Buat Reservasi Baru'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-
-          return ListView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(12),
-            itemCount: state.reservations.length,
-            itemBuilder: (context, index) {
-              final r = state.reservations[index];
-
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Header Card ─────────────────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                r.vehicle.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  color: AppTheme.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                r.vehicle.type,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        _StatusChip(status: r.status),
-                      ],
-                    ),
-                    const Divider(height: 18),
-                    _InfoRow(
-                        Icons.calendar_today_outlined, '${r.reservationDate} · ${r.batch.name} (${r.batch.startTime}–${r.batch.endTime})'),
-                    _InfoRow(Icons.business_outlined, r.workUnit),
-                    _InfoRow(Icons.notes_outlined, 'Kebutuhan: ${r.purpose}'),
-                    if (r.adminNote != null && r.adminNote!.isNotEmpty)
-                      _InfoRow(Icons.sticky_note_2_outlined, 'Catatan Admin: ${r.adminNote!}'),
-                    const SizedBox(height: 10),
-
-                    // ── Aksi ────────────────────────────
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // Batalkan (hanya jika pending)
-                        if (r.isPending)
-                          OutlinedButton.icon(
-                            onPressed: () => _confirmCancel(context, ref, r.id),
-                            icon: const Icon(Icons.cancel_outlined, size: 16),
-                            label: const Text('Batalkan'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.dangerColor,
-                              side: const BorderSide(
-                                  color: AppTheme.dangerColor),
-                            ),
-                          ),
-
-                        if (r.isPending) const SizedBox(width: 8),
-
-                        // Lihat Struk (approved/completed)
-                        if (r.isApproved || r.isCompleted)
-                          ElevatedButton.icon(
-                            onPressed: () => _showReceipt(context, r),
-                            icon: const Icon(Icons.receipt_long, size: 16),
-                            label: const Text('Struk'),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      }),
-      ),
-      ),
+      body: Column(
+        children: [
+          Expanded(child: content),
+        ],
       ),
     );
   }
 
-  void _confirmCancel(BuildContext context, WidgetRef ref, int id) {
+  // ── Card Widget untuk Mobile ──────────────────────────────
+  Widget _buildUserReservationCard(ReservationModel r) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        r.vehicle.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        r.vehicle.type,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _StatusChip(status: r.status),
+              ],
+            ),
+            const Divider(height: 18),
+            _InfoRow(
+              Icons.calendar_today_outlined,
+              '${r.reservationDate} · ${r.batch.name} (${r.batch.startTime}–${r.batch.endTime})',
+            ),
+            _InfoRow(Icons.business_outlined, r.workUnit),
+            _InfoRow(Icons.notes_outlined, 'Kebutuhan: ${r.purpose}'),
+            if (r.adminNote != null && r.adminNote!.isNotEmpty)
+              _InfoRow(Icons.sticky_note_2_outlined, 'Catatan Admin: ${r.adminNote!}'),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _buildUserActionButtons(r),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Tombol Aksi User Sesuai Status ────────────────────────
+  Widget _buildUserActionButtons(ReservationModel r) {
+    if (r.isPending) {
+      return OutlinedButton.icon(
+        onPressed: () => _confirmCancel(r.id),
+        icon: const Icon(Icons.cancel_outlined, size: 16),
+        label: const Text('Batalkan'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppTheme.dangerColor,
+          side: const BorderSide(color: AppTheme.dangerColor),
+        ),
+      );
+    }
+    if (r.isApproved || r.isCompleted) {
+      return ElevatedButton.icon(
+        onPressed: () => _showReceipt(r),
+        icon: const Icon(Icons.receipt_long, size: 16),
+        label: const Text('Struk'),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  void _confirmCancel(int id) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Batalkan Reservasi?'),
-        content: const Text(
-            'Reservasi yang dibatalkan tidak dapat dikembalikan.'),
+        content: const Text('Reservasi yang dibatalkan tidak dapat dikembalikan.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -245,8 +296,7 @@ class _ReservationHistoryScreenState
               Navigator.pop(ctx);
               ref.read(reservationListProvider.notifier).cancel(id);
             },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.dangerColor),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerColor),
             child: const Text('Ya, Batalkan'),
           ),
         ],
@@ -254,7 +304,7 @@ class _ReservationHistoryScreenState
     );
   }
 
-  void _showReceipt(BuildContext context, dynamic reservation) {
+  void _showReceipt(ReservationModel reservation) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -336,16 +386,16 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 5),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 15, color: AppTheme.textSecondary),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                  fontSize: 13, color: AppTheme.textSecondary),
+              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
             ),
           ),
         ],
