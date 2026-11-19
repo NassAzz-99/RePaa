@@ -25,19 +25,27 @@ class ReservationModel {
   });
 
   factory ReservationModel.fromJson(Map<String, dynamic> json) {
+    final vehicleMap = json['vehicle'] is Map
+        ? Map<String, dynamic>.from(json['vehicle'] as Map)
+        : <String, dynamic>{};
+    final batchMap = json['batch'] is Map
+        ? Map<String, dynamic>.from(json['batch'] as Map)
+        : <String, dynamic>{};
+    final userMap = json['user'] is Map
+        ? Map<String, dynamic>.from(json['user'] as Map)
+        : <String, dynamic>{};
+
     return ReservationModel(
-      id: json['id'] as int,
-      status: json['status'] as String,
-      reservationDate: json['reservation_date'] as String,
-      workUnit: json['work_unit'] as String,
-      purpose: json['purpose'] as String,
-      adminNote: json['admin_note'] as String?,
-      vehicle: ReservationVehicle.fromJson(
-          json['vehicle'] as Map<String, dynamic>),
-      batch:
-          ReservationBatch.fromJson(json['batch'] as Map<String, dynamic>),
-      user: ReservationUser.fromJson(json['user'] as Map<String, dynamic>),
-      createdAt: json['created_at'] as String,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      status: json['status']?.toString() ?? 'pending',
+      reservationDate: json['reservation_date']?.toString() ?? '',
+      workUnit: json['work_unit']?.toString() ?? '',
+      purpose: json['purpose']?.toString() ?? '',
+      adminNote: json['admin_note']?.toString(),
+      vehicle: ReservationVehicle.fromJson(vehicleMap),
+      batch: ReservationBatch.fromJson(batchMap),
+      user: ReservationUser.fromJson(userMap),
+      createdAt: json['created_at']?.toString() ?? '',
     );
   }
 
@@ -73,10 +81,10 @@ class ReservationVehicle {
 
   factory ReservationVehicle.fromJson(Map<String, dynamic> json) {
     return ReservationVehicle(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      type: json['type'] as String,
-      photoUrl: json['photo_url'] as String?,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name']?.toString() ?? '-',
+      type: json['type']?.toString() ?? '-',
+      photoUrl: json['photo_url']?.toString(),
     );
   }
 }
@@ -96,10 +104,10 @@ class ReservationBatch {
 
   factory ReservationBatch.fromJson(Map<String, dynamic> json) {
     return ReservationBatch(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      startTime: json['start_time'] as String,
-      endTime: json['end_time'] as String,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name']?.toString() ?? '-',
+      startTime: json['start_time']?.toString() ?? '',
+      endTime: json['end_time']?.toString() ?? '',
     );
   }
 
@@ -119,9 +127,9 @@ class ReservationUser {
 
   factory ReservationUser.fromJson(Map<String, dynamic> json) {
     return ReservationUser(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      email: json['email'] as String?,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name']?.toString() ?? '-',
+      email: json['email']?.toString(),
     );
   }
 }

@@ -22,9 +22,9 @@ class AdminReservationRepository {
       if (workUnit != null && workUnit.isNotEmpty) params['work_unit'] = workUnit;
 
       final res = await _dio.get('/admin/reservations', queryParameters: params);
-      final list = res.data['data'] as List;
+      final list = (res.data['data'] as List?) ?? [];
       return list
-          .map((e) => ReservationModel.fromJson(e as Map<String, dynamic>))
+          .map((e) => ReservationModel.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);

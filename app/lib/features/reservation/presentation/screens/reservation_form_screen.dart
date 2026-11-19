@@ -168,7 +168,16 @@ class _ReservationFormScreenState
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Form Reservasi')),
+      appBar: AppBar(
+        title: const Text('Form Reservasi'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history_outlined),
+            tooltip: 'Riwayat Reservasi Saya',
+            onPressed: () => context.go('/riwayat'),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(

@@ -98,10 +98,10 @@ class ReservationRepository {
         '/reservations',
         queryParameters: {'page': page},
       );
-      final data = response.data['data'] as List;
+      final data = (response.data['data'] as List?) ?? [];
       return data
           .map((r) =>
-              ReservationModel.fromJson(r as Map<String, dynamic>))
+              ReservationModel.fromJson(Map<String, dynamic>.from(r as Map)))
           .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
@@ -112,7 +112,7 @@ class ReservationRepository {
     try {
       final response = await _dio.get('/reservations/$id');
       return ReservationModel.fromJson(
-          response.data['data'] as Map<String, dynamic>);
+          Map<String, dynamic>.from(response.data['data'] as Map));
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
