@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../admin_dashboard/data/models/dashboard_stat_model.dart';
 import '../../../admin_dashboard/presentation/providers/admin_dashboard_provider.dart';
+import '../../../auth/data/models/user_model.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 /// Halaman Profil Admin.
@@ -127,7 +129,7 @@ class AdminProfileScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Statistik ringkas ────────────────────────────────────
-                  _StatCard(dashState: dashState),
+                  _StatCard(data: dashState.data),
 
                   const SizedBox(height: 16),
 
@@ -195,7 +197,7 @@ class AdminProfileScreen extends ConsumerWidget {
   }
 
   void _showEditProfileSheet(
-      BuildContext context, WidgetRef ref, dynamic user) {
+      BuildContext context, WidgetRef ref, UserModel? user) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -215,14 +217,14 @@ class AdminProfileScreen extends ConsumerWidget {
 // ────────────────────────────────────────────────────────────────────────────
 
 class _StatCard extends StatelessWidget {
-  final dynamic dashState;
-  const _StatCard({required this.dashState});
+  final DashboardStatModel? data;
+  const _StatCard({required this.data});
 
   @override
   Widget build(BuildContext context) {
-    final approved = dashState.data?.summary.approved ?? 0;
-    final pending = dashState.data?.summary.pending ?? 0;
-    final vehicles = dashState.data?.summary.vehiclesAvailable ?? 0;
+    final approved = data?.approved ?? 0;
+    final pending = data?.pending ?? 0;
+    final vehicles = data?.availableVehicles ?? 0;
 
     return Card(
       child: Padding(
@@ -486,6 +488,8 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
         'name': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
       });
+      // Refresh data user di authProvider
+      await ref.read(authProvider.notifier).refreshUser();
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
