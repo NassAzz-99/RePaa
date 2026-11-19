@@ -102,6 +102,17 @@ class _BatchCardState extends State<_BatchCard> {
   }
 
   @override
+  void didUpdateWidget(covariant _BatchCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.batch != widget.batch) {
+      _nameCtrl.text = widget.batch.name;
+      _startTime = widget.batch.startTime;
+      _endTime = widget.batch.endTime;
+      _isActive = widget.batch.isActive;
+    }
+  }
+
+  @override
   void dispose() {
     _nameCtrl.dispose();
     super.dispose();

@@ -16,9 +16,9 @@ router.get('/availability', auth, async (req, res, next) => {
   try {
     const date = req.query.date?.toString() ?? todayJakarta();
 
-    // Ambil semua kendaraan available (tidak soft-deleted, tidak maintenance/inactive)
+    // Ambil semua kendaraan aktif (tidak soft-deleted, tidak inactive)
     const vehicles = await prisma.vehicle.findMany({
-      where: { deleted_at: null, status: 'available' },
+      where: { deleted_at: null, status: { in: ['available', 'maintenance'] } },
       orderBy: { name: 'asc' },
     });
 

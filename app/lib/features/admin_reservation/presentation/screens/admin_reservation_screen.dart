@@ -133,7 +133,7 @@ class AdminReservationScreen extends ConsumerWidget {
                 DropdownMenuItem(value: 'cancelled', child: Text('Dibatalkan')),
                 DropdownMenuItem(value: 'completed', child: Text('Selesai')),
               ],
-              onChanged: (v) => setModal(() => status = v),
+              onChanged: (v) => setModal(() => status = (v == 'all' ? null : v)),
             ),
             const SizedBox(height: 12),
 
@@ -153,7 +153,15 @@ class AdminReservationScreen extends ConsumerWidget {
                 }
               },
               child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Tanggal'),
+                decoration: InputDecoration(
+                  labelText: 'Tanggal',
+                  suffixIcon: date != null
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () => setModal(() => date = null),
+                        )
+                      : null,
+                ),
                 child: Text(date ?? 'Semua tanggal',
                     style: TextStyle(
                         color: date != null
@@ -189,7 +197,7 @@ class AdminReservationScreen extends ConsumerWidget {
                   onPressed: () {
                     ref.read(adminReservationProvider.notifier).setFilter(
                           AdminReservationFilter(
-                            status: status,
+                            status: status == 'all' ? null : status,
                             date: date,
                             workUnit: workUnitCtrl.text.trim().isEmpty
                                 ? null
@@ -205,7 +213,7 @@ class AdminReservationScreen extends ConsumerWidget {
           ]),
         ),
       ),
-    );
+    ).whenComplete(() => workUnitCtrl.dispose());
   }
 }
 
@@ -328,8 +336,10 @@ class _ReservationCard extends StatelessWidget {
         ],
       ),
     );
+    final text = ctrl.text.trim();
+    ctrl.dispose();
     if (confirmed == true) {
-      onReject(ctrl.text.trim().isEmpty ? null : ctrl.text.trim());
+      onReject(text.isEmpty ? null : text);
     }
   }
 

@@ -9,7 +9,6 @@ const router = Router();
 
 /**
  * GET /api/admin/reports?period=daily|weekly&date=YYYY-MM-DD
- * [Rencana] – implementasi dasar sesuai blueprint response example.
  */
 router.get('/reports', auth, admin, async (req, res, next) => {
   try {
@@ -77,13 +76,49 @@ router.get('/reports', auth, admin, async (req, res, next) => {
     const vStatusMap = { available: 0, maintenance: 0, inactive: 0 };
     for (const g of vehicleStatusCounts) vStatusMap[g.status] = g._count.status;
 
+    // Trend calculation
+    const trendStart = period === 'weekly'
+      ? new Date(from)
+      : (() => { const d = new Date(baseDate); d.setDate(d.getDate() - 6); return d; })();
+    const trendEnd = period === 'weekly' ? new Date(to) : new Date(baseDate);
+
+    const trendGroups = await prisma.reservation.groupBy({
+      by: ['reservation_date'],
+      where: {
+        reservation_date: {
+          gte: trendStart,
+          lte: trendEnd,
+        },
+      },
+      _count: { reservation_date: true },
+    });
+
+    const trendMap = {};
+    for (const g of trendGroups) {
+      const dStr = g.reservation_date instanceof Date
+        ? g.reservation_date.toISOString().split('T')[0]
+        : String(g.reservation_date).split('T')[0];
+      trendMap[dStr] = (trendMap[dStr] || 0) + g._count.reservation_date;
+    }
+
+    const trend = [];
+    const cur = new Date(trendStart);
+    while (cur <= trendEnd) {
+      const dStr = cur.toISOString().split('T')[0];
+      trend.push({
+        date: dStr,
+        count: trendMap[dStr] || 0,
+      });
+      cur.setDate(cur.getDate() + 1);
+    }
+
     return sendSuccess(res, {
       message: 'OK',
       data: {
         period,
         range: { from, to },
         status_summary: statusSummary,
-        trend: [], // [Rencana] – per-hari/batch breakdown
+        trend,
         vehicle_utilization: vehicleGroups.map((g) => ({
           vehicle: vehicleMap[g.vehicle_id] ?? `ID ${g.vehicle_id}`,
           reservations: g._count.vehicle_id,

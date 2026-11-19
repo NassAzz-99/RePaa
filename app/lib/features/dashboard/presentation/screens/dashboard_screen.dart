@@ -12,11 +12,26 @@ import '../widgets/vehicle_card.dart';
 /// - Header: "Ketersediaan Kendaraan Hari Ini", keterangan, tombol Buat Reservasi
 /// - Legenda warna, grid/list kartu kendaraan, ikon lonceng di AppBar
 /// - Pull-to-refresh
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Reload data setiap kali halaman dibuka, memastikan token sudah tersedia
+    // setelah proses login selesai.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(dashboardProvider.notifier).refresh();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(dashboardProvider);
 
     return Scaffold(
@@ -129,6 +144,49 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
 
+            // ── Seksi Rekomendasi Kendaraan ───────────────
+            if (!state.isLoading &&
+                state.errorMessage == null &&
+                (state.data?.vehicles.isNotEmpty ?? false))
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.thumb_up_alt_outlined,
+                          color: AppTheme.accentColor, size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Rekomendasi Kendaraan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${state.data!.vehicles.where((v) => v.isAvailable).length} Unit Tersedia',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accentColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
             // ── Daftar Kendaraan ──────────────────────────
             if (!state.isLoading &&
                 state.errorMessage == null &&
@@ -159,6 +217,8 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 }
+
+// ── Helper widgets ──────────────────────────────────────────────────────────
 
 class _Legend extends StatelessWidget {
   const _Legend();

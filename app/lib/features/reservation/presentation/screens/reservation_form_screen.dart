@@ -30,6 +30,18 @@ class _ReservationFormScreenState
   DateTime? _selectedDate;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.preSelectedVehicleId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref
+            .read(reservationFormProvider.notifier)
+            .setPreSelectedVehicleId(widget.preSelectedVehicleId);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _workUnitCtrl.dispose();
     _purposeCtrl.dispose();

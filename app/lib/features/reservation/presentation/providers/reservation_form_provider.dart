@@ -74,9 +74,17 @@ class ReservationFormState {
 
 class ReservationFormNotifier extends StateNotifier<ReservationFormState> {
   final ReservationRepository _repo;
+  int? _preSelectedVehicleId;
 
   ReservationFormNotifier(this._repo) : super(const ReservationFormState()) {
     _loadBatches();
+  }
+
+  void setPreSelectedVehicleId(int? id) {
+    _preSelectedVehicleId = id;
+    if (id != null) {
+      preSelectVehicle(id);
+    }
   }
 
   Future<void> _loadBatches() async {
@@ -130,9 +138,16 @@ class ReservationFormNotifier extends StateNotifier<ReservationFormState> {
         date: state.selectedDate!,
         batchId: state.selectedBatch!.id,
       );
+      AvailableVehicleModel? selected;
+      if (_preSelectedVehicleId != null) {
+        selected = vehicles
+            .where((v) => v.id == _preSelectedVehicleId)
+            .firstOrNull;
+      }
       state = state.copyWith(
         status: FormStatus.idle,
         availableVehicles: vehicles,
+        selectedVehicle: selected,
       );
     } on ApiException catch (e) {
       state = state.copyWith(

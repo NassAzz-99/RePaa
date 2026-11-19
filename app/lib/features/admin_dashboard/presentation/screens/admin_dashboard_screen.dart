@@ -94,7 +94,7 @@ class _StatCards extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      childAspectRatio: 1.15,
       children: [
         _StatCard(
           label: 'Menunggu',
@@ -141,19 +141,20 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: color, size: 28),
+            Icon(icon, color: color, size: 26),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   '$value',
                   style: TextStyle(
-                    fontSize: 26,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
@@ -162,6 +163,8 @@ class _StatCard extends StatelessWidget {
                   label,
                   style: const TextStyle(
                       fontSize: 12, color: AppTheme.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -423,8 +426,10 @@ class _PendingCard extends StatelessWidget {
         ],
       ),
     );
+    final text = ctrl.text.trim();
+    ctrl.dispose();
     if (confirmed == true) {
-      onReject(ctrl.text.trim().isEmpty ? null : ctrl.text.trim());
+      onReject(text.isEmpty ? null : text);
     }
   }
 }
