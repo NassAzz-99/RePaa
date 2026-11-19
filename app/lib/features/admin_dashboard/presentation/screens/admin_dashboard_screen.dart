@@ -172,9 +172,62 @@ class _ReportTab extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: SegmentedButton<String>(
+                      showSelectedIcon: false,
+                      style: ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                          (states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return AppTheme.primaryColor;
+                            }
+                            return Colors.grey.shade100;
+                          },
+                        ),
+                        foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                          (states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return Colors.white;
+                            }
+                            return AppTheme.textPrimary;
+                          },
+                        ),
+                        side: WidgetStateProperty.all(
+                          BorderSide(color: Colors.grey.shade300),
+                        ),
+                        shape: WidgetStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
                       segments: const [
-                        ButtonSegment(value: 'daily', label: Text('Harian')),
-                        ButtonSegment(value: 'weekly', label: Text('Mingguan')),
+                        ButtonSegment(
+                          value: 'daily',
+                          label: Text(
+                            'Harian',
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        ButtonSegment(
+                          value: 'weekly',
+                          label: Text(
+                            'Mingguan',
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ],
                       selected: {state.period},
                       onSelectionChanged: (s) =>
@@ -184,6 +237,7 @@ class _ReportTab extends ConsumerWidget {
                   const SizedBox(width: 10),
                   // Date Picker
                   InkWell(
+                    borderRadius: BorderRadius.circular(8),
                     onTap: () async {
                       final parts = state.startDate.split('-');
                       final initial = parts.length == 3
@@ -206,19 +260,25 @@ class _ReportTab extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 8),
                       decoration: BoxDecoration(
+                        color: Colors.white,
                         border: Border.all(color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.calendar_today_outlined,
-                              size: 16, color: AppTheme.textSecondary),
+                              size: 15, color: AppTheme.primaryColor),
                           const SizedBox(width: 6),
                           Text(
                             state.startDate.isNotEmpty
                                 ? state.startDate
                                 : 'Pilih Tanggal',
-                            style: const TextStyle(fontSize: 12),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.textPrimary,
+                            ),
                           ),
                         ],
                       ),
