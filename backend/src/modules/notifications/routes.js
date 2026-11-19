@@ -22,16 +22,31 @@ router.get('/', async (req, res, next) => {
         orderBy: { created_at: 'desc' },
         skip,
         take: perPage,
-        select: {
-          id: true, type: true, title: true, message: true,
-          reservation_id: true, read_at: true, created_at: true,
+        include: {
+          reservation: {
+            select: {
+              admin_note: true,
+              status: true,
+            },
+          },
         },
       }),
     ]);
 
+    const formatted = notifications.map((n) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      message: n.message,
+      reservation_id: n.reservation_id,
+      read_at: n.read_at,
+      created_at: n.created_at,
+      admin_note: n.reservation?.admin_note ?? null,
+    }));
+
     return sendSuccess(res, {
       message: 'OK',
-      data: notifications,
+      data: formatted,
       meta: buildMeta(total, page, perPage),
     });
   } catch (err) {

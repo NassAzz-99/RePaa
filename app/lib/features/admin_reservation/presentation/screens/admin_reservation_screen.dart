@@ -653,22 +653,7 @@ class _AdminReservationScreenState
   }
 
   void _showReceipt(ReservationModel reservation) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.85,
-        builder: (ctx, controller) => SingleChildScrollView(
-          controller: controller,
-          padding: const EdgeInsets.all(16),
-          child: ReceiptWidget(reservation: reservation, showUserEmail: true),
-        ),
-      ),
-    );
+    ReceiptWidget.show(context, reservation, showUserEmail: true);
   }
 }
 

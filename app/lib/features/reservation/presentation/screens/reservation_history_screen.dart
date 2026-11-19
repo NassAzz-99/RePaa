@@ -349,36 +349,7 @@ class _ReservationHistoryScreenState
   }
 
   void _showReceipt(ReservationModel reservation) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.85,
-        builder: (ctx, controller) => SingleChildScrollView(
-          controller: controller,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ReceiptWidget(reservation: reservation),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
+    ReceiptWidget.show(context, reservation);
   }
 }
 
