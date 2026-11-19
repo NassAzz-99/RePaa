@@ -8,10 +8,13 @@ import '../providers/reservation_list_provider.dart';
 import '../widgets/receipt_widget.dart';
 
 /// Halaman Riwayat Reservasi Pengguna.
-/// Sesuai spesifikasi FIX_BLANK_PAGE_RESERVASI.md:
-/// - Mobile (< 700px): Card list rapi dengan Expanded(child: ListView.builder)
-/// - Desktop (>= 700px): Tabel lebar DataTable dengan horizontal scroll
-/// - Bebas unbounded constraint error dan null-safe 100%
+/// Sesuai spesifikasi FIX_RESPONSIVE_MOBILE_RESERVASI.md:
+/// - Desktop (>= 700px): Tabel lebar DataTable (tidak diubah).
+/// - Mobile (< 700px): Daftar Card format 'label: nilai' berurutan ke bawah.
+/// - Tidak ada overflow di lebar 360px.
+/// - Menunggu: tombol Batalkan.
+/// - Disetujui/Selesai: tombol Struk.
+/// - Ditolak: tampilkan alasan dari admin dengan jelas.
 class ReservationHistoryScreen extends ConsumerStatefulWidget {
   const ReservationHistoryScreen({super.key});
 
@@ -106,7 +109,7 @@ class _ReservationHistoryScreenState
       content = LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 700) {
-            // ── Mobile View (< 700px): Card List ────────────
+            // ── Mobile View (< 700px): Card List (label: nilai) ───
             return RefreshIndicator(
               onRefresh: () => ref.read(reservationListProvider.notifier).load(),
               child: ListView.builder(
@@ -114,12 +117,12 @@ class _ReservationHistoryScreenState
                 itemCount: state.reservations.length,
                 itemBuilder: (context, index) {
                   final r = state.reservations[index];
-                  return _buildUserReservationCard(r);
+                  return _buildUserMobileCard(r);
                 },
               ),
             );
           } else {
-            // ── Desktop View (>= 700px): Tabel Lebar DataTable ─
+            // ── Desktop View (>= 700px): Tabel Lebar DataTable (tetap) ─
             return RefreshIndicator(
               onRefresh: () => ref.read(reservationListProvider.notifier).load(),
               child: SingleChildScrollView(
@@ -161,7 +164,7 @@ class _ReservationHistoryScreenState
                               DataCell(Text(r.purpose.length > 25 ? '${r.purpose.substring(0, 25)}...' : r.purpose)),
                               DataCell(_StatusChip(status: r.status)),
                               DataCell(Text(r.adminNote != null && r.adminNote!.isNotEmpty ? r.adminNote! : '-')),
-                              DataCell(_buildUserActionButtons(r)),
+                              DataCell(_buildUserTableActionButtons(r)),
                             ],
                           );
                         }).toList(),
@@ -196,69 +199,110 @@ class _ReservationHistoryScreenState
     );
   }
 
-  // ── Card Widget untuk Mobile ──────────────────────────────
-  Widget _buildUserReservationCard(ReservationModel r) {
+  // ── Card Widget untuk Mobile Sesuai Bagian 6 (Format label: nilai) ──
+  Widget _buildUserMobileCard(ReservationModel r) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 1,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _LabelValueRow(label: 'Tanggal', value: r.reservationDate),
+            const SizedBox(height: 8),
+            _LabelValueRow(
+              label: 'Batch',
+              value: '${r.batch.name} (${r.batch.startTime}–${r.batch.endTime})',
+            ),
+            const SizedBox(height: 8),
+            _LabelValueRow(
+              label: 'Kendaraan',
+              value: '${r.vehicle.name} (${r.vehicle.type})',
+            ),
+            const SizedBox(height: 8),
+            _LabelValueRow(label: 'Unit Kerja', value: r.workUnit),
+            const SizedBox(height: 8),
+            _LabelValueRow(label: 'Jenis Kebutuhan', value: r.purpose),
+            const SizedBox(height: 8),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        r.vehicle.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        r.vehicle.type,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
+                const SizedBox(
+                  width: 110,
+                  child: Text(
+                    'Status',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ),
+                const Text(': ', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
                 _StatusChip(status: r.status),
               ],
             ),
-            const Divider(height: 18),
-            _InfoRow(
-              Icons.calendar_today_outlined,
-              '${r.reservationDate} · ${r.batch.name} (${r.batch.startTime}–${r.batch.endTime})',
-            ),
-            _InfoRow(Icons.business_outlined, r.workUnit),
-            _InfoRow(Icons.notes_outlined, 'Kebutuhan: ${r.purpose}'),
-            if (r.adminNote != null && r.adminNote!.isNotEmpty)
-              _InfoRow(Icons.sticky_note_2_outlined, 'Catatan Admin: ${r.adminNote!}'),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                _buildUserActionButtons(r),
-              ],
-            ),
+            if (r.adminNote != null && r.adminNote!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: r.status == 'rejected'
+                      ? AppTheme.dangerColor.withValues(alpha: 0.08)
+                      : Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: r.status == 'rejected'
+                        ? AppTheme.dangerColor.withValues(alpha: 0.3)
+                        : Colors.amber.shade300,
+                  ),
+                ),
+                child: _LabelValueRow(
+                  label: r.status == 'rejected' ? 'Catatan Penolakan' : 'Catatan Admin',
+                  value: r.adminNote!,
+                  valueColor: r.status == 'rejected' ? AppTheme.dangerColor : Colors.amber.shade900,
+                ),
+              ),
+            ],
+            // Aksi dinamis
+            if (r.isPending) ...[
+              const Divider(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _confirmCancel(r.id),
+                  icon: const Icon(Icons.cancel_outlined, size: 16),
+                  label: const Text('Batalkan Reservasi'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.dangerColor,
+                    side: const BorderSide(color: AppTheme.dangerColor),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ] else if (r.isApproved || r.isCompleted) ...[
+              const Divider(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showReceipt(r),
+                  icon: const Icon(Icons.receipt_long, size: 16),
+                  label: const Text('Lihat Struk'),
+                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  // ── Tombol Aksi User Sesuai Status ────────────────────────
-  Widget _buildUserActionButtons(ReservationModel r) {
+  // ── Tombol Aksi Tabel Desktop ─────────────────────────────
+  Widget _buildUserTableActionButtons(ReservationModel r) {
     if (r.isPending) {
       return OutlinedButton.icon(
         onPressed: () => _confirmCancel(r.id),
@@ -338,6 +382,49 @@ class _ReservationHistoryScreenState
   }
 }
 
+class _LabelValueRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _LabelValueRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 110,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ),
+        const Text(': ', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: valueColor ?? AppTheme.textPrimary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StatusChip extends StatelessWidget {
   final String status;
   const _StatusChip({required this.status});
@@ -373,32 +460,6 @@ class _StatusChip extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _InfoRow(this.icon, this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 15, color: AppTheme.textSecondary),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-            ),
-          ),
-        ],
       ),
     );
   }

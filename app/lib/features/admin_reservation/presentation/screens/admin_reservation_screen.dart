@@ -7,12 +7,15 @@ import '../../../reservation/presentation/widgets/receipt_widget.dart';
 import '../providers/admin_reservation_provider.dart';
 
 /// Halaman Kelola Reservasi Administrator.
-/// Sesuai spesifikasi FIX_BLANK_PAGE_RESERVASI.md:
-/// - Mobile (< 700px): Card list rapi dengan Expanded(child: ListView.builder)
-/// - Desktop (>= 700px): Tabel lebar DataTable dengan horizontal scroll
-/// - Filter status, tanggal, unit kerja + tombol reset
-/// - Aksi dinamis sesuai status (Setujui/Tolak, Selesai, Struk)
-/// - Bebas unbounded constraint error dan null-safe 100%
+/// Sesuai spesifikasi FIX_RESPONSIVE_MOBILE_RESERVASI.md:
+/// - Desktop (>= 700px): Tabel lebar DataTable (tidak diubah).
+/// - Mobile (< 700px): Daftar Card format 'label: nilai' berurutan ke bawah.
+/// - Menunggu: Tombol Setujui dan Tolak sejajar dan sama lebar.
+/// - Disetujui: Tombol Struk dan Selesai.
+/// - Selesai: Tombol Struk.
+/// - Ditolak: Tanpa tombol aksi, tampilkan alasan penolakan.
+/// - Tolak dengan Alasan: AlertDialog wajib minimal 5 karakter & cegah double click.
+/// - Tidak ada overflow di 360px.
 class AdminReservationScreen extends ConsumerStatefulWidget {
   const AdminReservationScreen({super.key});
 
@@ -111,7 +114,7 @@ class _AdminReservationScreenState
       content = LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 700) {
-            // ── Mobile View (< 700px): Card List ────────────
+            // ── Mobile View (< 700px): Card List (label: nilai) ───
             return RefreshIndicator(
               onRefresh: () => ref.read(adminReservationProvider.notifier).load(),
               child: ListView.builder(
@@ -119,12 +122,12 @@ class _AdminReservationScreenState
                 itemCount: state.reservations.length,
                 itemBuilder: (context, index) {
                   final r = state.reservations[index];
-                  return _buildAdminCard(r);
+                  return _buildAdminMobileCard(r);
                 },
               ),
             );
           } else {
-            // ── Desktop View (>= 700px): Tabel Lebar DataTable ─
+            // ── Desktop View (>= 700px): Tabel Lebar DataTable (tetap) ─
             return RefreshIndicator(
               onRefresh: () => ref.read(adminReservationProvider.notifier).load(),
               child: SingleChildScrollView(
@@ -171,7 +174,7 @@ class _AdminReservationScreenState
                               DataCell(Text('${r.reservationDate} · ${r.batch.name} (${r.batch.startTime}–${r.batch.endTime})')),
                               DataCell(Text(r.purpose.length > 25 ? '${r.purpose.substring(0, 25)}...' : r.purpose)),
                               DataCell(_StatusBadge(status: r.status)),
-                              DataCell(_buildAdminActionButtons(r)),
+                              DataCell(_buildAdminTableActionButtons(r)),
                             ],
                           );
                         }).toList(),
@@ -259,61 +262,146 @@ class _AdminReservationScreenState
     );
   }
 
-  // ── Card Widget untuk Mobile ──────────────────────────────
-  Widget _buildAdminCard(ReservationModel r) {
+  // ── Card Widget untuk Mobile Sesuai Bagian 2 (Format label: nilai) ──
+  Widget _buildAdminMobileCard(ReservationModel r) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 1,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _AdminLabelValueRow(
+              label: 'Pemohon',
+              value: '${r.user.name} (${r.user.email ?? '-'})',
+            ),
+            const SizedBox(height: 8),
+            _AdminLabelValueRow(label: 'Unit Kerja', value: r.workUnit),
+            const SizedBox(height: 8),
+            _AdminLabelValueRow(
+              label: 'Kendaraan',
+              value: '${r.vehicle.name} (${r.vehicle.type})',
+            ),
+            const SizedBox(height: 8),
+            _AdminLabelValueRow(
+              label: 'Tanggal dan Batch',
+              value: '${r.reservationDate} · ${r.batch.name} (${r.batch.startTime}–${r.batch.endTime})',
+            ),
+            const SizedBox(height: 8),
+            _AdminLabelValueRow(label: 'Jenis Kebutuhan', value: r.purpose),
+            const SizedBox(height: 8),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        r.user.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      Text(
-                        r.user.email ?? '',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                      ),
-                    ],
+                const SizedBox(
+                  width: 125,
+                  child: Text(
+                    'Status',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ),
+                const Text(': ', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
                 _StatusBadge(status: r.status),
               ],
             ),
-            const Divider(height: 16),
-            _Row(Icons.business_outlined, r.workUnit),
-            _Row(Icons.local_shipping_outlined, '${r.vehicle.name} (${r.vehicle.type})'),
-            _Row(
-              Icons.calendar_today_outlined,
-              '${r.reservationDate} · ${r.batch.name} ${r.batch.startTime}–${r.batch.endTime}',
-            ),
-            _Row(Icons.notes_outlined, 'Kebutuhan: ${r.purpose}', maxLines: 2),
-            if (r.adminNote != null && r.adminNote!.isNotEmpty)
-              _Row(Icons.sticky_note_2_outlined, 'Catatan: ${r.adminNote!}'),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                _buildAdminActionButtons(r),
-              ],
-            ),
+            if (r.status == 'rejected' && r.adminNote != null && r.adminNote!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.dangerColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.dangerColor.withValues(alpha: 0.3)),
+                ),
+                child: _AdminLabelValueRow(
+                  label: 'Alasan Penolakan',
+                  value: r.adminNote!,
+                  valueColor: AppTheme.dangerColor,
+                ),
+              ),
+            ],
+            // Aksi dinamis di bagian bawah kartu
+            if (r.isPending) ...[
+              const Divider(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _showRejectDialog(r.id),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.dangerColor,
+                        side: const BorderSide(color: AppTheme.dangerColor),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('Tolak'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => ref.read(adminReservationProvider.notifier).approve(r.id),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.successColor,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('Setuju'),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (r.isApproved) ...[
+              const Divider(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showReceipt(r),
+                      icon: const Icon(Icons.receipt_long, size: 16),
+                      label: const Text('Struk'),
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => ref.read(adminReservationProvider.notifier).complete(r.id),
+                      icon: const Icon(Icons.check, size: 16),
+                      label: const Text('Selesai'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (r.isCompleted) ...[
+              const Divider(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showReceipt(r),
+                  icon: const Icon(Icons.receipt_long, size: 16),
+                  label: const Text('Struk'),
+                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  // ── Tombol Aksi Admin Sesuai Status ───────────────────────
-  Widget _buildAdminActionButtons(ReservationModel r) {
+  // ── Tombol Aksi Tabel Desktop ─────────────────────────────
+  Widget _buildAdminTableActionButtons(ReservationModel r) {
     if (r.isPending) {
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -358,6 +446,92 @@ class _AdminReservationScreenState
       );
     }
     return const SizedBox.shrink();
+  }
+
+  // ── Dialog Tolak dengan Validasi Min 5 Karakter & Anti Double Click ──
+  Future<void> _showRejectDialog(int id) async {
+    final ctrl = TextEditingController();
+    bool isSubmitting = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final text = ctrl.text.trim();
+          final isValid = text.length >= 5;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text(
+              'Tolak Reservasi',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Masukkan alasan penolakan (wajib diisi, minimal 5 karakter):',
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: ctrl,
+                  maxLines: 3,
+                  autofocus: true,
+                  enabled: !isSubmitting,
+                  onChanged: (_) => setDialogState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Contoh: Kendaraan sedang dalam pemeliharaan berkala.',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.all(12),
+                    errorText: (text.isNotEmpty && !isValid)
+                        ? 'Alasan minimal 5 karakter (${text.length}/5)'
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: (!isValid || isSubmitting)
+                    ? null
+                    : () async {
+                        setDialogState(() => isSubmitting = true);
+                        try {
+                          await ref
+                              .read(adminReservationProvider.notifier)
+                              .reject(id, text);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        } catch (_) {
+                          if (ctx.mounted) {
+                            setDialogState(() => isSubmitting = false);
+                          }
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.dangerColor,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                ),
+                child: isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Kirim Penolakan'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    ctrl.dispose();
   }
 
   // ── Filter BottomSheet ────────────────────────────────────
@@ -478,37 +652,6 @@ class _AdminReservationScreenState
     ).whenComplete(() => workUnitCtrl.dispose());
   }
 
-  Future<void> _showRejectDialog(int id) async {
-    final ctrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Tolak Reservasi'),
-        content: TextField(
-          controller: ctrl,
-          maxLines: 3,
-          decoration: const InputDecoration(hintText: 'Catatan penolakan (opsional)'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerColor),
-            child: const Text('Tolak'),
-          ),
-        ],
-      ),
-    );
-    final text = ctrl.text.trim();
-    ctrl.dispose();
-    if (confirmed == true) {
-      ref.read(adminReservationProvider.notifier).reject(id, text.isEmpty ? null : text);
-    }
-  }
-
   void _showReceipt(ReservationModel reservation) {
     showModalBottomSheet(
       context: context,
@@ -525,6 +668,49 @@ class _AdminReservationScreenState
           child: ReceiptWidget(reservation: reservation, showUserEmail: true),
         ),
       ),
+    );
+  }
+}
+
+class _AdminLabelValueRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _AdminLabelValueRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 125,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ),
+        const Text(': ', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: valueColor ?? AppTheme.textPrimary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -554,35 +740,6 @@ class _StatusBadge extends StatelessWidget {
       child: Text(
         cfg.$1,
         style: TextStyle(color: cfg.$2, fontSize: 11, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
-class _Row extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final int maxLines;
-  const _Row(this.icon, this.text, {this.maxLines = 1});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 14, color: AppTheme.textSecondary),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-              maxLines: maxLines,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }
