@@ -1,16 +1,13 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/validators.dart';
 import '../providers/auth_provider.dart';
 
-/// Halaman Login.
-/// Spesifikasi (01_auth.md):
-/// - Kartu di tengah, latar gradasi biru gelap
-/// - Logo, judul "Sistem Reservasi PAA", subjudul "Peralatan Angkat & Angkut"
-/// - Field Email, Password, tombol Masuk, link ke Register
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -45,61 +42,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppTheme.primaryVariant, AppTheme.primaryColor],
-          ),
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: Card(
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(28),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: _GlassCard(
                   child: Form(
                     key: _formKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // ── Logo & Judul ─────────────────
-                        const Icon(
-                          Icons.local_shipping_rounded,
-                          size: 56,
-                          color: AppTheme.primaryColor,
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Sistem Reservasi PAA',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor,
+                        // ── Logo & Judul ──────────────────────────
+                        Center(
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.local_shipping_rounded,
+                              size: 36,
+                              color: Colors.white,
+                            ),
                           ),
-                          textAlign: TextAlign.center,
                         ),
-                        const Text(
-                          'Peralatan Angkat & Angkut',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppTheme.textSecondary,
+                        const SizedBox(height: 16),
+                        Center(
+                          child: Text(
+                            'Sistem Reservasi PAA',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Center(
+                          child: Text(
+                            'Peralatan Angkat & Angkut',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 28),
 
-                        // ── Error Banner ─────────────────
+                        // ── Error Banner ──────────────────────────
                         if (authState.status == AuthStatus.error &&
                             authState.errorMessage != null)
                           _ErrorBanner(message: authState.errorMessage!),
 
-                        // ── Email ────────────────────────
+                        // ── Email ─────────────────────────────────
                         TextFormField(
                           controller: _emailCtrl,
                           keyboardType: TextInputType.emailAddress,
@@ -110,9 +115,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           validator: Validators.email,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
 
-                        // ── Password ─────────────────────
+                        // ── Password ──────────────────────────────
                         TextFormField(
                           controller: _passwordCtrl,
                           obscureText: _obscurePassword,
@@ -122,14 +127,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             labelText: 'Password',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                              ),
+                              icon: Icon(_obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility),
                               onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
+                                  () => _obscurePassword = !_obscurePassword),
                             ),
                           ),
                           validator: (v) =>
@@ -137,33 +139,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // ── Tombol Masuk ─────────────────
+                        // ── Tombol Masuk ──────────────────────────
                         ElevatedButton(
                           onPressed: authState.isLoading ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppTheme.primaryColor,
+                          ),
                           child: authState.isLoading
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: AppTheme.primaryColor,
                                   ),
                                 )
                               : const Text('Masuk'),
                         ),
                         const SizedBox(height: 16),
 
-                        // ── Link Register ────────────────
+                        // ── Link Register ─────────────────────────
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text(
+                            Text(
                               'Belum punya akun?',
-                              style: TextStyle(color: AppTheme.textSecondary),
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                fontSize: 13,
+                              ),
                             ),
                             TextButton(
                               onPressed: () => context.go('/register'),
-                              child: const Text('Daftar di sini'),
+                              child: Text(
+                                'Daftar di sini',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -180,6 +196,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
+// ── Glass Card ───────────────────────────────────────────────────────────────
+class _GlassCard extends StatelessWidget {
+  final Widget child;
+  const _GlassCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Error Banner ─────────────────────────────────────────────────────────────
 class _ErrorBanner extends StatelessWidget {
   final String message;
   const _ErrorBanner({required this.message});
@@ -190,18 +235,21 @@ class _ErrorBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.dangerColor.withValues(alpha: 0.1),
-        border: Border.all(color: AppTheme.dangerColor),
-        borderRadius: BorderRadius.circular(8),
+        color: AppTheme.dangerColor.withValues(alpha: 0.15),
+        border: Border.all(color: AppTheme.dangerColor.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: AppTheme.dangerColor, size: 20),
+          const Icon(Icons.error_outline, color: Colors.white, size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: AppTheme.dangerColor, fontSize: 13),
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white,
+                fontSize: 13,
+              ),
             ),
           ),
         ],
